@@ -15,7 +15,6 @@ IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Facto
 	DROP TABLE [dbo].[Factors]
 GO
 
-
 CREATE TABLE Factors
 (
 	[Value] [int] NOT NULL,
@@ -27,22 +26,3 @@ CREATE TABLE Factors
 		[Prime] ASC
 	)
 )
-
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Numbers]') AND type in (N'U'))
-	DROP TABLE [dbo].[Numbers]
-GO
-
-CREATE TABLE Numbers
-(
-	[Value] [int] NOT NULL CONSTRAINT [PK_Numbers] PRIMARY KEY CLUSTERED
-)
-
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Primes]') AND type in (N'U'))
-	DROP TABLE [dbo].[Primes]
-GO
-
-CREATE TABLE Primes
-(
-	[Value] [int] NOT NULL CONSTRAINT [PK_Primes] PRIMARY KEY CLUSTERED
-)
-

@@ -2,86 +2,33 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
-using System.Text;
 
 namespace DBPrimes
 {
-    class InsertionCommand
-    {
-        private const int BATCH_SIZE = 1000;
-        readonly string command;
-        readonly List<string> items = new();
-
-        public InsertionCommand(string command)
-        {
-            this.command = command;
-        }
-
-        public void Add(string item)
-        {
-            items.Add(item);
-        }
-
-        public IEnumerable<string> GetBatches()
-        {
-            var sb = new StringBuilder();
-
-            for (int i = 0; i < items.Count; i++)
-            {
-                string item = items[i];
-                if (i % BATCH_SIZE == 0)
-                {
-                    sb.AppendLine(command);
-                }
-
-                sb.Append(item);
-                if ((i + 1) % BATCH_SIZE != 0 && i != items.Count - 1)
-                {
-                    sb.AppendLine(",");
-                }
-                else
-                {
-                    yield return sb.ToString();
-                    sb.Clear();
-                }
-            }
-        }
-    }
-
     class Program
     {
-        const string SQL_GET_START_END = @"
-DECLARE @Start INT = (SELECT ISNULL(MAX([Value]), 0) + 1 FROM Factors)
-DECLARE @End INT = (SELECT MAX([Value]) FROM Numbers)
-DECLARE @MaxPrime INT = (SELECT ISNULL(MAX([Value]), 0) FROM Primes)
-SELECT @Start, @End, @MaxPrime
-";
         static void Main(string[] args)
         {
+            int end = Convert.ToInt32(args[0]);
+
+            const string SQL_GET_START = "SELECT ISNULL(MAX(Value), 0) + 1 FROM Factors";
+
             using var sqlConn = new SqlConnection("server=localhost;database=numbers;trusted_connection=true");
-            using var sqlCmd = new SqlCommand(SQL_GET_START_END, sqlConn);
+            using var sqlCmd = new SqlCommand(SQL_GET_START, sqlConn);
             sqlConn.Open();
+            var start = (int)sqlCmd.ExecuteScalar();
 
-            int start, end, maxPrime;
-            using (var reader = sqlCmd.ExecuteReader())
+            if (end <= start)
             {
-                reader.Read();
-                start = reader.GetInt32(0);
-                end = reader.GetInt32(1);
-                maxPrime = reader.GetInt32(2);
+                string SQL_DELETE_RECORDS = $"DELETE FROM Factors WHERE [Value] > {end}";
+                sqlCmd.CommandText = SQL_DELETE_RECORDS;
+                sqlCmd.ExecuteNonQuery();
+                return;
             }
 
-            var commands = new List<InsertionCommand>
-            {
-                new InsertionCommand("INSERT INTO Primes VALUES")
-            };
             var primes = GetPrimes(2, end).ToList();
-            foreach (int prime in primes.Where(p => p > maxPrime))
-            {
-                commands.Last().Add($"({prime})");
-            }
 
-            commands.Add(new InsertionCommand("INSERT INTO Factors VALUES"));
+            var cmd = new InsertionCommand("INSERT INTO Factors VALUES");
             for (int i = start; i <= end; ++i)
             {
                 foreach (int prime in primes.Where(p => p <= i))
@@ -89,21 +36,17 @@ SELECT @Start, @End, @MaxPrime
                     var m = GetMultiplicity(i, prime);
                     if (m != 0)
                     {
-                        commands.Last().Add($"({i}, {prime}, {m})");
+                        cmd.Add($"({i}, {prime}, {m})");
                     }
                 }
             }
 
-            foreach (InsertionCommand command in commands)
+            foreach (var batch in cmd.GetBatches())
             {
-                foreach (var batch in command.GetBatches())
-                {
-                    sqlCmd.CommandText = batch;
-                    sqlCmd.ExecuteNonQuery();
-                }
+                sqlCmd.CommandText = batch;
+                sqlCmd.ExecuteNonQuery();
             }
         }
-
 
         private static int GetMultiplicity(int n, int p)
         {

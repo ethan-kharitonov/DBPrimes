@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DBPrimes": {
+      "commandName": "Project",
+      "commandLineArgs": "100"
+    }
+  }
+}
