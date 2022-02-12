@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 
 namespace DBPrimes
@@ -27,38 +28,67 @@ namespace DBPrimes
                 return;
             }
 
+            var primeFactors = new Dictionary<int, Dictionary<int, int>>();
+            const string SQL_GET_FACTORS = "SELECT [Value], Prime, Degree FROM Factors";
+            sqlCmd.CommandText = SQL_GET_FACTORS;
+
+            int value;
+            using (var reader = sqlCmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    value = reader.GetInt32(0);
+                    if (!primeFactors.TryGetValue(value, out var factors))
+                    {
+                        primeFactors[value] = factors = new();
+                    }
+
+                    factors.Add(reader.GetInt32(1), reader.GetInt32(2));
+                }
+            }
+
             var primes = GetPrimes(2, end).ToList();
 
-            var cmd = new InsertionCommand("INSERT INTO Factors VALUES");
             for (int i = start; i <= end; ++i)
             {
-                foreach (int prime in primes.Where(p => p <= i))
+                var found = primes.BinarySearch(i);
+                if (found >= 0)
                 {
-                    var m = GetMultiplicity(i, prime);
-                    if (m != 0)
+                    primeFactors.Add(i, new Dictionary<int, int>
                     {
-                        cmd.Add($"({i}, {prime}, {m})");
+                        { i, 1}
+                    });
+                    continue;
+                }
+
+                foreach (int prime in primes)
+                {
+                    if (i % prime == 0)
+                    {
+                        var f = new Dictionary<int, int>(primeFactors[i / prime]);
+                        f.TryGetValue(prime, out var degree);
+                        f[prime] = degree + 1;
+                        primeFactors.Add(i, f);
+                        break;
                     }
                 }
             }
 
-            foreach (var batch in cmd.GetBatches())
+            var cmd = new InsertionCommand("INSERT INTO Factors VALUES");
+            foreach (var (num, f) in primeFactors.Where(e => e.Key >= start).OrderBy(e => e.Key))
             {
-                sqlCmd.CommandText = batch;
-                sqlCmd.ExecuteNonQuery();
-            }
-        }
-
-        private static int GetMultiplicity(int n, int p)
-        {
-            int count = 0;
-            while (n % p == 0)
-            {
-                n /= p;
-                ++count;
+                foreach (var (prime, degree) in f.OrderBy(e => e.Key))
+                {
+                    cmd.Add($"({num}, {prime}, {degree})");
+                }
             }
 
-            return count;
+            sqlCmd.CommandText = cmd.Query;
+            sqlCmd.CommandTimeout = 600;
+
+            var sw = Stopwatch.StartNew();
+            sqlCmd.ExecuteNonQuery();
+            Console.WriteLine(sw.Elapsed);
         }
 
         private static IEnumerable<int> GetPrimes(int start, int end)

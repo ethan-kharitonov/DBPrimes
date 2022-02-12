@@ -7,40 +7,32 @@ namespace DBPrimes
     {
         private const int BATCH_SIZE = 1000;
         readonly string command;
-        readonly List<string> items = new();
+        readonly StringBuilder sb = new();
+        int count = 0;
+        string delim = "";
 
         public InsertionCommand(string command)
         {
             this.command = command;
         }
 
+        public string Query => sb.ToString();
+
         public void Add(string item)
         {
-            items.Add(item);
-        }
-
-        public IEnumerable<string> GetBatches()
-        {
-            var sb = new StringBuilder();
-
-            for (int i = 0; i < items.Count; i++)
+            if (count == 0)
             {
-                string item = items[i];
-                if (i % BATCH_SIZE == 0)
-                {
-                    sb.AppendLine(command);
-                }
-
-                sb.Append(item);
-                if ((i + 1) % BATCH_SIZE != 0 && i != items.Count - 1)
-                {
-                    sb.AppendLine(",");
-                }
-                else
-                {
-                    yield return sb.ToString();
-                    sb.Clear();
-                }
+                sb.AppendLine();
+                sb.Append(command);
+                delim = "";
+            }
+            sb.AppendLine(delim);
+            sb.Append(item);
+            delim = ",";
+            ++count;
+            if (count == BATCH_SIZE)
+            {
+                count = 0;
             }
         }
     }

@@ -2,7 +2,7 @@
   "profiles": {
     "DBPrimes": {
       "commandName": "Project",
-      "commandLineArgs": "50"
+      "commandLineArgs": "1000000"
     }
   }
 }
