@@ -7,8 +7,16 @@
       "Command": "200"
     },
     {
+      "Id": "4090f708-e0d4-42ce-b1d7-544eba7621af",
+      "Command": "1000"
+    },
+    {
       "Id": "db2e5dbf-bd06-4fd3-8cd0-ee1a6c53f848",
       "Command": "100"
+    },
+    {
+      "Id": "b26cc29a-a763-462d-a210-c7e1d3125bae",
+      "Command": "50"
     }
   ]
 }

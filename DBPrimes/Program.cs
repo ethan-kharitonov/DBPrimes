@@ -20,8 +20,9 @@ namespace DBPrimes
 
             if (end <= start)
             {
-                string SQL_DELETE_RECORDS = $"DELETE FROM Factors WHERE [Value] > {end}";
+                const string SQL_DELETE_RECORDS = "DELETE FROM Factors WHERE [Value] > @end";
                 sqlCmd.CommandText = SQL_DELETE_RECORDS;
+                sqlCmd.Parameters.Add(new SqlParameter("@end", end));
                 sqlCmd.ExecuteNonQuery();
                 return;
             }
